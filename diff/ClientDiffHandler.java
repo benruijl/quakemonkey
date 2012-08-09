@@ -2,6 +2,8 @@ package diff;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.jme3.network.AbstractMessage;
 import com.jme3.network.Client;
@@ -33,13 +35,21 @@ import com.jme3.network.serializing.Serializer;
 @SuppressWarnings("unchecked")
 public class ClientDiffHandler<T extends AbstractMessage> implements
 		MessageListener<Client> {
+	private final short numSnapshots;
 	private final Class<T> cls;
-	private T currentMessage = null;
+	private final List<T> snapshots;
 	private final MessageListenerRegistry<Client> listenerRegistry;
+	private short curPos;
 
-	public ClientDiffHandler(Client client, Class<T> cls) {
+	public ClientDiffHandler(Client client, Class<T> cls, short numSnapshots) {
+		this.numSnapshots = numSnapshots;
 		this.cls = cls;
 		listenerRegistry = new MessageListenerRegistry<>();
+		snapshots = new ArrayList<>(numSnapshots);
+
+		for (int i = 0; i < numSnapshots; i++) {
+			snapshots.add(null);
+		}
 
 		client.addMessageListener(this, LabeledMessage.class);
 	}
@@ -95,33 +105,47 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 	 * message. Sends an acknowledgment to the server when a message is
 	 * received.
 	 */
-	// TODO: fix a jumpback issue that may occur when currentMessage gets set,
-	// but ACK does not arrive at server
 	@Override
 	public void messageReceived(Client source, Message m) {
 		if (m instanceof LabeledMessage) {
 			LabeledMessage lm = (LabeledMessage) m;
+			T message = (T) lm.getMessage();
 
-			if (cls.isInstance(lm.getMessage())) {
-				currentMessage = (T) lm.getMessage();
+			boolean isNew = curPos < lm.getLabel()
+					|| lm.getLabel() - curPos > Short.MAX_VALUE / 2;
+
+			// message is too old
+			if (curPos - lm.getLabel() > numSnapshots) {
+				return;
+			}
+
+			if (cls.isInstance(lm.getMessage())) { // received full message
+				snapshots.set(lm.getLabel() % numSnapshots, message);
 			} else {
 				if (lm.getMessage() instanceof DiffMessage) {
 					System.out.println("Received diff of size "
-							+ MessageProtocol.messageToBuffer(lm.getMessage(),
-									null).limit());
-					T newMessage = mergeMessage(currentMessage,
-							(DiffMessage) lm.getMessage());
+							+ MessageProtocol.messageToBuffer(message, null)
+									.limit());
 
-					currentMessage = newMessage;
+					DiffMessage diffMessage = (DiffMessage) message;
 
+					T newMessage = mergeMessage(
+							snapshots.get(diffMessage.getMessageId()),
+							diffMessage);
+					
+					snapshots.set(lm.getLabel() % numSnapshots, newMessage);
 				}
 			}
-
+			
 			/* Send an ACK back */
+			// TODO: check if ack should always be sent
 			source.send(new AckMessage(lm.getLabel()));
 
 			/* Broadcast changes */
-			listenerRegistry.messageReceived(source, currentMessage);
+			if (isNew) {
+				curPos = lm.getLabel();
+				listenerRegistry.messageReceived(source, snapshots.get(curPos));
+			}
 
 		}
 	}

@@ -26,7 +26,7 @@ public class ClientTest implements MessageListener<Client> {
 
 		Client myClient = Network.connectToServer("localhost", 6143);
 
-		diffHandler = new ClientDiffHandler<>(myClient, GameStateMessage.class);
+		diffHandler = new ClientDiffHandler<>(myClient, GameStateMessage.class, (short)30);
 		diffHandler.addListener(this); // register listener for GameStateMessage
 
 		myClient.start();

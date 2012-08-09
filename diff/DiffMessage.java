@@ -12,6 +12,7 @@ import com.jme3.network.serializing.Serializable;
  */
 @Serializable
 public class DiffMessage extends AbstractMessage {
+	private short messageId; // ID of the message the diff is from
 	private byte[] flag;
 	private int[] data;
 
@@ -19,10 +20,15 @@ public class DiffMessage extends AbstractMessage {
 		super(false);
 	}
 
-	public DiffMessage(byte[] flag, int[] data) {
+	public DiffMessage(short messageId, byte[] flag, int[] data) {
 		super(false);
+		this.messageId = messageId;
 		this.data = data;
 		this.flag = flag;
+	}
+	
+	public short getMessageId() {
+		return messageId;
 	}
 
 	public int[] getData() {

@@ -52,7 +52,7 @@ public class DiffConnection<T extends AbstractMessage> {
 		}
 
 		T oldMessage = snapshots.get(ackPos);
-		return new LabeledMessage(oldPos, generateDelta(message, oldMessage));
+		return new LabeledMessage(oldPos, generateDelta(message, oldMessage, ackPos));
 	}
 
 	public void registerAck(short id) {
@@ -80,7 +80,7 @@ public class DiffConnection<T extends AbstractMessage> {
 	 *            Previous message
 	 * @return
 	 */
-	public Message generateDelta(T message, T prevMessage) {
+	public Message generateDelta(T message, T prevMessage, short prevID) {
 		// TODO: skip size?
 		ByteBuffer old = MessageProtocol.messageToBuffer(prevMessage, null);
 		ByteBuffer buffer = MessageProtocol.messageToBuffer(message, null);
@@ -117,7 +117,7 @@ public class DiffConnection<T extends AbstractMessage> {
 			int[] b = new int[diffInts.remaining()];
 			diffInts.get(b, 0, b.length);
 
-			return new DiffMessage(flag, b);
+			return new DiffMessage(prevID, flag, b);
 		} else {
 			return message;
 		}
