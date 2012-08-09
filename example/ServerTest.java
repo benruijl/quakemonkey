@@ -13,6 +13,7 @@ import com.jme3.network.Server;
 import com.jme3.network.serializing.Serializer;
 
 import diff.DiffClassRegistration;
+import diff.LabeledMessage;
 import diff.ServerDiffHandler;
 
 /**
@@ -63,6 +64,8 @@ public class ServerTest {
 				/* Dispatch same message to all clients */
 				diffHandler.dispatchMessage(myServer,
 						Filters.in(myServer.getConnections()), newMessage);
+				
+				myServer.broadcast(new LabeledMessage((short)1, newMessage));
 			}
 			try {
 				Thread.sleep(1000);

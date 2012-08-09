@@ -20,12 +20,12 @@ import com.jme3.network.base.MessageProtocol;
  *            Message type
  */
 public class DiffConnection<T extends AbstractMessage> {
-	private final int numSnapshots;
+	private final short numSnapshots;
 	private final List<T> snapshots;
 	private short curPos; // position in cyclic array
 	private short ackPos;
 
-	public DiffConnection(int numSnapshots) {
+	public DiffConnection(short numSnapshots) {
 		this.numSnapshots = numSnapshots;
 		snapshots = new ArrayList<>(numSnapshots);
 
@@ -38,8 +38,8 @@ public class DiffConnection<T extends AbstractMessage> {
 	}
 
 	public Message generateSnapshot(T message) {
-		short oldPos = (short) (curPos % numSnapshots);
-		snapshots.set(oldPos, message);
+		short oldPos = curPos;
+		snapshots.set((short) (oldPos % numSnapshots), message);
 		curPos++;
 
 		// only allow positive positions
@@ -51,15 +51,16 @@ public class DiffConnection<T extends AbstractMessage> {
 			return new LabeledMessage(oldPos, message);
 		}
 
-		T oldMessage = snapshots.get(ackPos);
-		return new LabeledMessage(oldPos, generateDelta(message, oldMessage, ackPos));
+		T oldMessage = snapshots.get(ackPos % numSnapshots);
+		return new LabeledMessage(oldPos, generateDelta(message, oldMessage,
+				ackPos));
 	}
 
 	public void registerAck(short id) {
 		// because the array is cyclic, the ackPos could be in front of the id,
 		// so we check if the difference between the two is very large ( > 4
 		// minutes at
-		// 60 fps). this is how we identify a cycle.
+		// 60 fps). this is how we identify an overflow.
 		if (id > ackPos || ackPos - id > Short.MAX_VALUE / 2) {
 			System.out
 					.println("[Server message] client received message " + id);

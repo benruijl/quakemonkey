@@ -27,10 +27,10 @@ import com.jme3.network.Server;
  */
 public class ServerDiffHandler<T extends AbstractMessage> implements
 		MessageListener<HostedConnection>, ConnectionListener {
-	private final int numHistory;
+	private final short numHistory;
 	private final Map<HostedConnection, DiffConnection<T>> connectionSnapshots;
 
-	public ServerDiffHandler(Server server, int numHistory) {
+	public ServerDiffHandler(Server server, short numHistory) {
 		this.numHistory = numHistory;
 		connectionSnapshots = new HashMap<>();
 
@@ -38,7 +38,7 @@ public class ServerDiffHandler<T extends AbstractMessage> implements
 	}
 
 	public ServerDiffHandler(Server server) {
-		this(server, 20);
+		this(server, (short)20);
 	}
 
 	/**

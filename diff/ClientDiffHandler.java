@@ -116,6 +116,8 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 
 			// message is too old
 			if (curPos - lm.getLabel() > numSnapshots) {
+				System.out.println("Discarding too old message: " + lm.getLabel()
+						+ " vs. cur " + curPos);
 				return;
 			}
 
@@ -132,11 +134,11 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 					T newMessage = mergeMessage(
 							snapshots.get(diffMessage.getMessageId()),
 							diffMessage);
-					
+
 					snapshots.set(lm.getLabel() % numSnapshots, newMessage);
 				}
 			}
-			
+
 			/* Send an ACK back */
 			// TODO: check if ack should always be sent
 			source.send(new AckMessage(lm.getLabel()));
@@ -145,6 +147,10 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 			if (isNew) {
 				curPos = lm.getLabel();
 				listenerRegistry.messageReceived(source, snapshots.get(curPos));
+			} else {
+				// notify if message was old, for testing
+				System.out.println("Old message received: " + lm.getLabel()
+						+ " vs. cur " + curPos);
 			}
 
 		}
