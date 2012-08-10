@@ -65,6 +65,7 @@ public class ServerTest {
 				diffHandler.dispatchMessage(myServer,
 						Filters.in(myServer.getConnections()), newMessage);
 				
+				// send a message that is old (id=1), see what happens
 				myServer.broadcast(new LabeledMessage((short)1, newMessage));
 			}
 			try {

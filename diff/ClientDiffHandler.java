@@ -115,9 +115,11 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 					|| lm.getLabel() - curPos > Short.MAX_VALUE / 2;
 
 			// message is too old
-			if (curPos - lm.getLabel() > numSnapshots) {
-				System.out.println("Discarding too old message: " + lm.getLabel()
-						+ " vs. cur " + curPos);
+			if (curPos - lm.getLabel() > numSnapshots
+					|| (lm.getLabel() - curPos > Short.MAX_VALUE / 2 && Short.MAX_VALUE
+							- lm.getLabel() + curPos > numSnapshots)) {
+				System.out.println("Discarding too old message: "
+						+ lm.getLabel() + " vs. cur " + curPos);
 				return;
 			}
 
@@ -132,8 +134,8 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 					DiffMessage diffMessage = (DiffMessage) message;
 
 					T newMessage = mergeMessage(
-							snapshots.get(diffMessage.getMessageId()),
-							diffMessage);
+							snapshots.get(diffMessage.getMessageId()
+									% numSnapshots), diffMessage);
 
 					snapshots.set(lm.getLabel() % numSnapshots, newMessage);
 				}
@@ -146,7 +148,8 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 			/* Broadcast changes */
 			if (isNew) {
 				curPos = lm.getLabel();
-				listenerRegistry.messageReceived(source, snapshots.get(curPos));
+				listenerRegistry.messageReceived(source,
+						snapshots.get(curPos % numSnapshots));
 			} else {
 				// notify if message was old, for testing
 				System.out.println("Old message received: " + lm.getLabel()

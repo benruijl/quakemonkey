@@ -51,16 +51,24 @@ public class DiffConnection<T extends AbstractMessage> {
 			return new LabeledMessage(oldPos, message);
 		}
 
+		/* Is the last received message too old? Send a full one */
+		if (oldPos - ackPos > numSnapshots
+				|| (ackPos - oldPos > Short.MAX_VALUE / 2 && Short.MAX_VALUE
+						- ackPos + oldPos > numSnapshots)) {
+			return new LabeledMessage(oldPos, message);
+		}
+
 		T oldMessage = snapshots.get(ackPos % numSnapshots);
 		return new LabeledMessage(oldPos, generateDelta(message, oldMessage,
 				ackPos));
 	}
 
 	public void registerAck(short id) {
-		// because the array is cyclic, the ackPos could be in front of the id,
+		// because the array is cyclic, the id could be in front of the old
+		// ackPos,
 		// so we check if the difference between the two is very large ( > 4
 		// minutes at
-		// 60 fps). this is how we identify an overflow.
+		// 60 fps).
 		if (id > ackPos || ackPos - id > Short.MAX_VALUE / 2) {
 			System.out
 					.println("[Server message] client received message " + id);
