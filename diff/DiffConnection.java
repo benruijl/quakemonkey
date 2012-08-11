@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.jme3.network.AbstractMessage;
 import com.jme3.network.Message;
@@ -20,6 +22,8 @@ import com.jme3.network.base.MessageProtocol;
  *            Message type
  */
 public class DiffConnection<T extends AbstractMessage> {
+	protected static final Logger log = Logger.getLogger(DiffConnection.class
+			.getName());
 	private final short numSnapshots;
 	private final List<T> snapshots;
 	private short curPos; // position in cyclic array
@@ -37,6 +41,14 @@ public class DiffConnection<T extends AbstractMessage> {
 		ackPos = -1;
 	}
 
+	/**
+	 * Adds a new message to the snapshot list and either returns the full
+	 * message or a delta message if the latter is possible.
+	 * 
+	 * @param message
+	 *            Message to add to snapshot list
+	 * @return {@code message} or a delta message
+	 */
 	public Message generateSnapshot(T message) {
 		short oldPos = curPos;
 		snapshots.set((short) (oldPos % numSnapshots), message);
@@ -63,6 +75,19 @@ public class DiffConnection<T extends AbstractMessage> {
 				ackPos));
 	}
 
+	/**
+	 * Gets the number of messages the server is lagging behind
+	 * 
+	 * @return Number of messages left behind
+	 */
+	public int getLag() {
+		if (curPos >= ackPos) {
+			return curPos - ackPos;
+		}
+
+		return Short.MAX_VALUE - ackPos + curPos;
+	}
+
 	public void registerAck(short id) {
 		// because the array is cyclic, the id could be in front of the old
 		// ackPos,
@@ -70,13 +95,12 @@ public class DiffConnection<T extends AbstractMessage> {
 		// minutes at
 		// 60 fps).
 		if (id > ackPos || ackPos - id > Short.MAX_VALUE / 2) {
-			System.out
-					.println("[Server message] client received message " + id);
+			log.log(Level.FINER, "Client received message " + id);
 			ackPos = id;
 			return;
 		}
 
-		System.out.println("Client received old message " + id);
+		log.log(Level.FINER, "Client received old message " + id);
 	}
 
 	/**

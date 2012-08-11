@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.jme3.network.AbstractMessage;
 import com.jme3.network.Client;
@@ -35,6 +37,8 @@ import com.jme3.network.serializing.Serializer;
 @SuppressWarnings("unchecked")
 public class ClientDiffHandler<T extends AbstractMessage> implements
 		MessageListener<Client> {
+	protected static final Logger log = Logger
+			.getLogger(ClientDiffHandler.class.getName());
 	private final short numSnapshots;
 	private final Class<T> cls;
 	private final List<T> snapshots;
@@ -93,8 +97,7 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 			newBuffer.position(2); // skip size
 			return (T) Serializer.readClassAndObject(newBuffer);
 		} catch (IOException e) {
-			System.out.println("Could not merge messages");
-			e.printStackTrace();
+			log.log(Level.SEVERE, "Could not merge messages", e);
 		}
 
 		return null;
@@ -118,8 +121,9 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 			if (curPos - lm.getLabel() > numSnapshots
 					|| (lm.getLabel() - curPos > Short.MAX_VALUE / 2 && Short.MAX_VALUE
 							- lm.getLabel() + curPos > numSnapshots)) {
-				System.out.println("Discarding too old message: "
-						+ lm.getLabel() + " vs. cur " + curPos);
+				log.log(Level.INFO,
+						"Discarding too old message: " + lm.getLabel()
+								+ " vs. cur " + curPos);
 				return;
 			}
 
@@ -127,7 +131,7 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 				snapshots.set(lm.getLabel() % numSnapshots, message);
 			} else {
 				if (lm.getMessage() instanceof DiffMessage) {
-					System.out.println("Received diff of size "
+					log.log(Level.FINE, "Received diff of size "
 							+ MessageProtocol.messageToBuffer(message, null)
 									.limit());
 
@@ -143,6 +147,8 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 
 			/* Send an ACK back */
 			// TODO: check if ack should always be sent
+			
+			if (lm.getLabel() % 22 == 0)
 			source.send(new AckMessage(lm.getLabel()));
 
 			/* Broadcast changes */
@@ -152,7 +158,7 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 						snapshots.get(curPos % numSnapshots));
 			} else {
 				// notify if message was old, for testing
-				System.out.println("Old message received: " + lm.getLabel()
+				log.log(Level.FINEST, "Old message received: " + lm.getLabel()
 						+ " vs. cur " + curPos);
 			}
 

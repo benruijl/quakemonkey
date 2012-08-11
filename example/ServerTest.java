@@ -13,7 +13,6 @@ import com.jme3.network.Server;
 import com.jme3.network.serializing.Serializer;
 
 import diff.DiffClassRegistration;
-import diff.LabeledMessage;
 import diff.ServerDiffHandler;
 
 /**
@@ -52,7 +51,7 @@ public class ServerTest {
 
 		List<Float> or = Arrays.asList(new Float[] { 0.5f, 0.6f, 0.7f });
 
-		for (int i = 0; i < 10000; i++) {
+		while (true) {
 			if (myServer.hasConnections()) {
 				List<Float> newPos = new ArrayList<Float>(
 						Arrays.asList(new Float[] { (float) serverTicks, 8.0f,
@@ -64,9 +63,17 @@ public class ServerTest {
 				/* Dispatch same message to all clients */
 				diffHandler.dispatchMessage(myServer,
 						Filters.in(myServer.getConnections()), newMessage);
-				
+
 				// send a message that is old (id=1), see what happens
-				myServer.broadcast(new LabeledMessage((short)1, newMessage));
+				// myServer.broadcast(new LabeledMessage((short)1, newMessage));
+
+				/* Check if the connection is lagging badly */
+				for (HostedConnection conn : myServer.getConnections()) {
+					if (diffHandler.getLag(conn) > 20) {
+						System.out.println("Client " + conn.getAddress()
+								+ " is lagging badly.");
+					}
+				}
 			}
 			try {
 				Thread.sleep(1000);
@@ -76,9 +83,6 @@ public class ServerTest {
 
 			serverTicks++;
 		}
-
-		myServer.close();
-
 	}
 
 	public static void main(String[] args) throws IOException,

@@ -2,6 +2,8 @@ package diff;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.jme3.network.AbstractMessage;
 import com.jme3.network.ConnectionListener;
@@ -16,8 +18,8 @@ import com.jme3.network.Server;
  * Handles the dispatching of messages of type {@code T} to clients, using a
  * protocol of delta messages.
  * <p>
- * Important: make sure that you call {@link DiffClassRegistration#registerClasses()} before starting the
- * server.
+ * Important: make sure that you call
+ * {@link DiffClassRegistration#registerClasses()} before starting the server.
  * 
  * @author Ben Ruijl
  * 
@@ -27,6 +29,8 @@ import com.jme3.network.Server;
  */
 public class ServerDiffHandler<T extends AbstractMessage> implements
 		MessageListener<HostedConnection>, ConnectionListener {
+	protected static final Logger log = Logger
+			.getLogger(ServerDiffHandler.class.getName());
 	private final short numHistory;
 	private final Map<HostedConnection, DiffConnection<T>> connectionSnapshots;
 
@@ -38,7 +42,7 @@ public class ServerDiffHandler<T extends AbstractMessage> implements
 	}
 
 	public ServerDiffHandler(Server server) {
-		this(server, (short)20);
+		this(server, (short) 20);
 	}
 
 	/**
@@ -64,6 +68,25 @@ public class ServerDiffHandler<T extends AbstractMessage> implements
 				server.broadcast(Filters.in(connection), newMessage);
 			}
 		}
+	}
+
+	/**
+	 * Returns the lag in terms of how many messages sent to the client haven't
+	 * been acknowledged. If the connection does not exist, for example because
+	 * no messages have been sent yet, 0 is returned.
+	 * 
+	 * @param conn
+	 *            Connection to client
+	 * @return Connection lag
+	 */
+	public int getLag(HostedConnection conn) {
+		if (!connectionSnapshots.containsKey(conn)) {
+			log.log(Level.WARNING,
+					"Trying to get lag of connection that does not exist (yet).");
+			return 0;
+		}
+
+		return connectionSnapshots.get(conn).getLag();
 	}
 
 	@Override
