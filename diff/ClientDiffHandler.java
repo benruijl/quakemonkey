@@ -146,9 +146,6 @@ public class ClientDiffHandler<T extends AbstractMessage> implements
 			}
 
 			/* Send an ACK back */
-			// TODO: check if ack should always be sent
-			
-			if (lm.getLabel() % 22 == 0)
 			source.send(new AckMessage(lm.getLabel()));
 
 			/* Broadcast changes */
