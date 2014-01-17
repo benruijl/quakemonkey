@@ -15,7 +15,7 @@ Summary:
 * Byte-level deltas: invisible to user
 * No need to split up master gamestate
 * Built on top of existing framework
-* Easy way connection to client is lagging
+* Easy way to check if client is lagging
 
 h2. Example code
 
